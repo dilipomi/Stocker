@@ -33,7 +33,7 @@
 
     <TextView
         android:id="@+id/row_symbol"
-        android:layout_width="wrap_content"
+        android:layout_width="48dip"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/autoCompleteTextView1"
@@ -43,11 +43,11 @@
 
     <TextView
         android:id="@+id/price"
-        android:layout_width="wrap_content"
+        android:layout_width="48dip"
         android:layout_height="wrap_content"
         android:layout_alignBottom="@+id/row_symbol"
         android:layout_alignTop="@+id/row_symbol"
-        android:layout_marginLeft="35dp"
+        android:layout_marginLeft="10dp"
         android:layout_toRightOf="@+id/row_symbol"
         android:text="Price"
         android:textStyle="bold"
@@ -55,25 +55,25 @@
 
     <TextView
         android:id="@+id/change"
-        android:layout_width="wrap_content"
+        android:layout_width="48dip"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/price"
         android:layout_alignBottom="@+id/price"
-        android:layout_marginLeft="35dp"
+        android:layout_marginLeft="10dp"
         android:layout_toRightOf="@+id/price"
-        android:text="Change"
+        android:text="Chg$"
         android:textStyle="bold"
         android:typeface="sans" />
     
     <TextView
         android:id="@+id/changePercent"
-        android:layout_width="wrap_content"
+        android:layout_width="50dip"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/price"
         android:layout_alignBottom="@+id/price"
-        android:layout_marginLeft="35dp"
+        android:layout_marginLeft="10dp"
         android:layout_toRightOf="@+id/change"
-        android:text="Change%"
+        android:text="Chg%"
         android:textStyle="bold"
         android:typeface="sans" />
 
