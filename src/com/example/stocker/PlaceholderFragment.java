@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -14,11 +15,16 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import android.app.AlertDialog;
 import android.app.ListFragment;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.renderscript.Type;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,18 +33,21 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.ListView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.Toast;
 
 public class PlaceholderFragment extends ListFragment {
 
 	private ArrayList<StockData> stockList;
 	private StockArrayAdapter stockAdapter;
 	private AutoCompleteTextView autoTextView;
+	private HashSet<String> record;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		stockList = new ArrayList<StockData>();
-
+		record = new HashSet<String>();
+		setRetainInstance(true);
 	}
 
 	@Override
@@ -61,6 +70,7 @@ public class PlaceholderFragment extends ListFragment {
 
 			private void updateView(Object item) {
 				new getStockQuote().execute((String) item);
+				autoTextView.setText("");
 			}
 
 		});
@@ -98,7 +108,8 @@ public class PlaceholderFragment extends ListFragment {
 				try {
 					JSONArray jsonArray = new JSONArray(content2);
 					JSONObject jsonObject = jsonArray.getJSONObject(0);
-					StockData stockData =  new StockData(jsonObject.getString("t"),
+					StockData stockData = new StockData(
+							jsonObject.getString("t"),
 							jsonObject.getString("l_cur"),
 							jsonObject.getString("c"),
 							jsonObject.getString("cp"));
@@ -114,12 +125,28 @@ public class PlaceholderFragment extends ListFragment {
 		@Override
 		protected void onPostExecute(StockData result) {
 			super.onPostExecute(result);
-			if (!stockList.contains(result)) {
+			if (!record.contains(result.symbol)) {
 				stockList.add(result);
+				record.add(result.symbol);
+				stockAdapter.notifyDataSetChanged();
+			} else {
+				Toast.makeText(getActivity(),
+						result.symbol + " already exists in your list",
+						Toast.LENGTH_SHORT).show();
 			}
-			stockAdapter.notifyDataSetChanged();
 		}
 
+	}
+
+	@Override
+	public void onPause() {
+		// TODO Auto-generated method stub
+		super.onPause();
+		SharedPreferences.Editor editor = this.getActivity().getPreferences(0)
+				.edit();
+		String stockListJsonString = new Gson().toJson(stockList);
+		editor.putString("stockList", stockListJsonString);
+		editor.commit();
 	}
 
 	@Override
@@ -127,15 +154,34 @@ public class PlaceholderFragment extends ListFragment {
 		super.onActivityCreated(savedInstanceState);
 		stockAdapter = new StockArrayAdapter(getActivity(),
 				R.layout.row_custom, stockList);
+		updateStockList();
 		setListAdapter(stockAdapter);
+	}
+
+	private void updateStockList() {
+		String stockListJsonString = this.getActivity().getPreferences(0)
+				.getString("stockList", null);
+		if (stockListJsonString != null) {
+			java.lang.reflect.Type type = new TypeToken<ArrayList<StockData>>() {
+			}.getType();
+			ArrayList<StockData> temp = new Gson().fromJson(
+					stockListJsonString, type);
+			for(StockData s : temp){
+				if(!record.contains(s.symbol)){
+					stockList.add(s);
+					record.add(s.symbol);
+				}
+			}
+			stockAdapter.notifyDataSetChanged();
+		}
 	}
 
 	@Override
 	public void onListItemClick(ListView l, View v, final int position, long id) {
 		super.onListItemClick(l, v, position, id);
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-		builder.setMessage("Do you want to remove " + stockList.get(position).symbol
-				+ "?");
+		builder.setMessage("Do you want to remove "
+				+ stockList.get(position).symbol + "?");
 		builder.setCancelable(false);
 		builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
 

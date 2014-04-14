@@ -10,7 +10,7 @@ public class StockData {
 	public String high;
 
 	public StockData(String symbol, String price, String change,
-			String changePercent, String low, String high) {
+			String changePercent) {
 		super();
 		this.symbol = symbol;
 		this.price = price;
