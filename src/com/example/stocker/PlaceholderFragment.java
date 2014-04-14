@@ -187,6 +187,7 @@ public class PlaceholderFragment extends ListFragment {
 
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
+				record.remove(stockList.get(position).symbol);
 				stockList.remove(position);
 				stockAdapter.notifyDataSetChanged();
 			}
