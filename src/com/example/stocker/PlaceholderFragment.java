@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -24,6 +26,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.renderscript.Type;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,6 +50,7 @@ public class PlaceholderFragment extends ListFragment {
 		super.onCreate(savedInstanceState);
 		stockList = new ArrayList<StockData>();
 		record = new HashSet<String>();
+		callAsynchronousTask();
 		setRetainInstance(true);
 	}
 
@@ -77,6 +81,29 @@ public class PlaceholderFragment extends ListFragment {
 		return rootView;
 	}
 
+	private void callAsynchronousTask() {
+		final Handler handler = new Handler();
+		Timer timer = new Timer();
+		TimerTask doAsyncTask = new TimerTask(){
+			@Override
+			public void run() {
+				handler.post(new Runnable(){
+
+					@Override
+					public void run() {
+						String[] symbolArray = new String[stockList.size()];
+						for(int i =0; i < stockList.size(); i++){
+							symbolArray[i] = stockList.get(i).symbol;
+						}
+						new getStockQuote().execute(symbolArray);
+
+					} 
+				});
+			}
+		};
+		timer.schedule(doAsyncTask, 0, 1000);
+	}
+	
 	private class getStockQuote extends AsyncTask<String, Void, StockData> {
 
 		@Override
@@ -84,11 +111,11 @@ public class PlaceholderFragment extends ListFragment {
 			int count = stockRequests.length;
 			for (int i = 0; i < count; i++) {
 				String stock = stockRequests[i];
-				String symbol = stock.substring(0, stock.indexOf("\t"));
+				if(stock.contains("\t")) stock = stock.substring(0, stock.indexOf("\t"));
 				HttpClient client = new DefaultHttpClient();
 				HttpGet httpGet = new HttpGet(
 						"http://finance.google.com/finance/info?client=ig&q="
-								+ symbol);
+								+ stock);
 				StringBuilder builder = new StringBuilder();
 				try {
 					HttpResponse response = client.execute(httpGet);
@@ -130,9 +157,15 @@ public class PlaceholderFragment extends ListFragment {
 				record.add(result.symbol);
 				stockAdapter.notifyDataSetChanged();
 			} else {
-				Toast.makeText(getActivity(),
-						result.symbol + " already exists in your list",
-						Toast.LENGTH_SHORT).show();
+				for(StockData s : stockList){
+					if(s.symbol.equals(result.symbol)){
+						s.price = result.price;
+						s.change = result.change;
+						s.changePercent = result.changePercent;
+					}
+					stockAdapter.notifyDataSetChanged();
+					break;
+				}
 			}
 		}
 
