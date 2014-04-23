@@ -76,5 +76,17 @@
         android:text="Chg%"
         android:textStyle="bold"
         android:typeface="sans" />
+    
+     <TextView
+        android:id="@+id/stopLose"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/price"
+        android:layout_alignBottom="@+id/price"
+        android:layout_marginLeft="10dp"
+        android:layout_toRightOf="@+id/changePercent"
+        android:text="stopLose"
+        android:textStyle="bold"
+        android:typeface="sans" />
 
 </RelativeLayout>

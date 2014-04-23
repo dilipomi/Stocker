@@ -20,9 +20,16 @@ import org.json.JSONObject;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.ListFragment;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.Notification.Builder;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -84,34 +91,37 @@ public class PlaceholderFragment extends ListFragment {
 	private void callAsynchronousTask() {
 		final Handler handler = new Handler();
 		Timer timer = new Timer();
-		TimerTask doAsyncTask = new TimerTask(){
+		TimerTask doAsyncTask = new TimerTask() {
 			@Override
 			public void run() {
-				handler.post(new Runnable(){
+				handler.post(new Runnable() {
 
 					@Override
 					public void run() {
 						String[] symbolArray = new String[stockList.size()];
-						for(int i =0; i < stockList.size(); i++){
+						for (int i = 0; i < stockList.size(); i++) {
 							symbolArray[i] = stockList.get(i).symbol;
 						}
 						new getStockQuote().execute(symbolArray);
 
-					} 
+					}
 				});
 			}
 		};
-		timer.schedule(doAsyncTask, 0, 1000);
+		timer.schedule(doAsyncTask, 0, 10000);
 	}
-	
-	private class getStockQuote extends AsyncTask<String, Void, StockData> {
+
+	private class getStockQuote extends
+			AsyncTask<String, Void, ArrayList<StockData>> {
 
 		@Override
-		protected StockData doInBackground(String... stockRequests) {
+		protected ArrayList<StockData> doInBackground(String... stockRequests) {
 			int count = stockRequests.length;
+			ArrayList<StockData> result = new ArrayList<StockData>();
 			for (int i = 0; i < count; i++) {
 				String stock = stockRequests[i];
-				if(stock.contains("\t")) stock = stock.substring(0, stock.indexOf("\t"));
+				if (stock.contains("\t"))
+					stock = stock.substring(0, stock.indexOf("\t"));
 				HttpClient client = new DefaultHttpClient();
 				HttpGet httpGet = new HttpGet(
 						"http://finance.google.com/finance/info?client=ig&q="
@@ -139,32 +149,43 @@ public class PlaceholderFragment extends ListFragment {
 							jsonObject.getString("t"),
 							jsonObject.getString("l_cur"),
 							jsonObject.getString("c"),
-							jsonObject.getString("cp"));
-					return stockData;
+							jsonObject.getString("cp"), "N/A");
+					result.add(stockData);
 
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
-			return null;
+			return result;
 		}
 
 		@Override
-		protected void onPostExecute(StockData result) {
-			super.onPostExecute(result);
-			if (!record.contains(result.symbol)) {
-				stockList.add(result);
-				record.add(result.symbol);
-				stockAdapter.notifyDataSetChanged();
-			} else {
-				for(StockData s : stockList){
-					if(s.symbol.equals(result.symbol)){
-						s.price = result.price;
-						s.change = result.change;
-						s.changePercent = result.changePercent;
-					}
+		protected void onPostExecute(ArrayList<StockData> resultList) {
+			super.onPostExecute(resultList);
+			for (StockData result : resultList) {
+				if (!record.contains(result.symbol)) {
+					stockList.add(result);
+					record.add(result.symbol);
 					stockAdapter.notifyDataSetChanged();
-					break;
+				} else {
+					for (StockData s : stockList) {
+						if (s.symbol.equals(result.symbol)) {
+							s.price = result.price;
+							s.change = result.change;
+							s.changePercent = result.changePercent;
+							stockAdapter.notifyDataSetChanged();
+							if (!s.stopLose.equals("N/A")) {
+								double priceDouble = Double
+										.parseDouble(s.price);
+								double stockLostDouble = Double
+										.parseDouble(s.stopLose);
+								if (priceDouble <= stockLostDouble) {
+									sendNotification(s.symbol);
+								}
+							}
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -180,6 +201,25 @@ public class PlaceholderFragment extends ListFragment {
 		String stockListJsonString = new Gson().toJson(stockList);
 		editor.putString("stockList", stockListJsonString);
 		editor.commit();
+	}
+
+	@SuppressLint("NewApi")
+	public void sendNotification(String symbol) {
+		Context context = getActivity();
+		Context context2 = getActivity().getApplicationContext();
+		Intent notificationIntent = new Intent(getActivity().getApplicationContext(),
+				MainActivity.class);
+		PendingIntent pendingIntent = PendingIntent.getActivity(getActivity().getApplicationContext(),
+				0, notificationIntent, Intent.FLAG_ACTIVITY_NEW_TASK);
+		Notification.Builder notificationBuilder = new Notification.Builder(
+				getActivity().getApplicationContext())
+				.setTicker(symbol + "is below the stopLose you set")
+				.setAutoCancel(true).setContentTitle("Notification!")
+				.setContentText(symbol + "is below the stopLose you set")
+				.setContentIntent(pendingIntent);
+		NotificationManager mNotificationManager = (NotificationManager) getActivity()
+				.getSystemService(getActivity().NOTIFICATION_SERVICE);
+		mNotificationManager.notify(1, notificationBuilder.build());
 	}
 
 	@Override
@@ -199,8 +239,8 @@ public class PlaceholderFragment extends ListFragment {
 			}.getType();
 			ArrayList<StockData> temp = new Gson().fromJson(
 					stockListJsonString, type);
-			for(StockData s : temp){
-				if(!record.contains(s.symbol)){
+			for (StockData s : temp) {
+				if (!record.contains(s.symbol)) {
 					stockList.add(s);
 					record.add(s.symbol);
 				}
